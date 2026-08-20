@@ -12,18 +12,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repository code
         uses: actions/checkout@v4
+        with:
+          path: 'user_code'
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-
-      - name: Generate App Icon
-        run: |
-          pip install pillow
-          python generate_icon.py
 
       - name: Set up Java JDK
         uses: actions/setup-java@v3
@@ -34,17 +31,34 @@ jobs:
       - name: Set up Flutter SDK
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.x'
+          flutter-version: '3.19.x'
           channel: 'stable'
 
-      - name: Install dependencies
-        run: flutter pub get
+      - name: Generate Fresh Flutter Android Boilerplate
+        run: |
+          flutter create --org com.example private_agent_app
+          cp -rf user_code/lib/* private_agent_app/lib/
+          
+      - name: Generate Custom Icon
+        run: |
+          pip install pillow
+          python -c "
+from PIL import Image, ImageDraw
+img = Image.new('RGB', (512, 512), color='#0F172A')
+draw = ImageDraw.Draw(img)
+draw.ellipse([56, 56, 456, 456], fill='#38BDF8')
+draw.ellipse([76, 76, 436, 436], fill='#0F172A')
+img.save('private_agent_app/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png')
+"
 
       - name: Build APK
-        run: flutter build apk --release
+        run: |
+          cd private_agent_app
+          flutter pub get
+          flutter build apk --release
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: private-agent-release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: private_agent_app/build/app/outputs/flutter-apk/app-release.apk
