@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Set up Java JDK
@@ -21,56 +21,13 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
 
-      - name: Create Web App Interface
+      - name: Build APK with Gradle
         run: |
-          mkdir -p www
-          cat << 'HTML' > www/index.html
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Private Agent</title>
-            <style>
-              body { background-color: #0F172A; color: white; font-family: sans-serif; padding: 20px; }
-              .card { background: #1E293B; padding: 20px; border-radius: 12px; margin-bottom: 15px; }
-              .title { color: #38BDF8; font-size: 22px; font-weight: bold; }
-              .status { color: #4ADE80; font-weight: bold; }
-              .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-              .btn { background: #334155; padding: 15px; border-radius: 10px; text-align: center; }
-            </style>
-          </head>
-          <body>
-            <h1>Private Agent Dashboard</h1>
-            <div class="card">
-              <div class="title">Agent Status</div>
-              <p class="status">● Active & Protection Enabled</p>
-            </div>
-            <div class="grid">
-              <div class="btn">🛡️ Security Audit</div>
-              <div class="btn">📊 Activity Logs</div>
-              <div class="btn">⚡ Task Manager</div>
-              <div class="btn">🔑 Permissions</div>
-            </div>
-          </body>
-          </html>
-          HTML
-
-      - name: Setup Android Native Project & Build APK
-        run: |
-          npm init -y
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init "Private Agent" "com.example.privateagent" --web-dir www
-          npx cap add android
-          npx cap sync android
           cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug
+          gradle assembleDebug
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
