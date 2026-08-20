@@ -12,15 +12,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository code
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          path: 'user_code'
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
 
       - name: Set up Java JDK
         uses: actions/setup-java@v3
@@ -28,37 +21,59 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Set up Flutter SDK
-        uses: subosito/flutter-action@v2
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          flutter-version: '3.19.x'
-          channel: 'stable'
+          node-version: '20'
 
-      - name: Generate Fresh Flutter Android Boilerplate
+      - name: Create Web App Interface
         run: |
-          flutter create --org com.example private_agent_app
-          cp -rf user_code/lib/* private_agent_app/lib/
-          
-      - name: Generate Custom Icon
-        run: |
-          pip install pillow
-          python -c "
-from PIL import Image, ImageDraw
-img = Image.new('RGB', (512, 512), color='#0F172A')
-draw = ImageDraw.Draw(img)
-draw.ellipse([56, 56, 456, 456], fill='#38BDF8')
-draw.ellipse([76, 76, 436, 436], fill='#0F172A')
-img.save('private_agent_app/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png')
-"
+          mkdir -p www
+          cat << 'HTML' > www/index.html
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Private Agent</title>
+            <style>
+              body { background-color: #0F172A; color: white; font-family: sans-serif; padding: 20px; }
+              .card { background: #1E293B; padding: 20px; border-radius: 12px; margin-bottom: 15px; }
+              .title { color: #38BDF8; font-size: 22px; font-weight: bold; }
+              .status { color: #4ADE80; font-weight: bold; }
+              .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+              .btn { background: #334155; padding: 15px; border-radius: 10px; text-align: center; }
+            </style>
+          </head>
+          <body>
+            <h1>Private Agent Dashboard</h1>
+            <div class="card">
+              <div class="title">Agent Status</div>
+              <p class="status">● Active & Protection Enabled</p>
+            </div>
+            <div class="grid">
+              <div class="btn">🛡️ Security Audit</div>
+              <div class="btn">📊 Activity Logs</div>
+              <div class="btn">⚡ Task Manager</div>
+              <div class="btn">🔑 Permissions</div>
+            </div>
+          </body>
+          </html>
+          HTML
 
-      - name: Build APK
+      - name: Setup Android Native Project & Build APK
         run: |
-          cd private_agent_app
-          flutter pub get
-          flutter build apk --release
+          npm init -y
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap init "Private Agent" "com.example.privateagent" --web-dir www
+          npx cap add android
+          npx cap sync android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: private-agent-release-apk
-          path: private_agent_app/build/app/outputs/flutter-apk/app-release.apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
